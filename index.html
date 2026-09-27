@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ludo Powers</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#101426;color:#fff;display:flex;justify-content:center;min-height:100vh}
+.screen{width:min(100%,900px);padding:20px}.hidden{display:none!important}
+h1{font-size:42px;text-align:center;margin:18px 0;color:#ffd34e;text-shadow:0 3px #000}
+button{border:0;border-radius:12px;padding:13px 18px;font-size:16px;font-weight:700;cursor:pointer;background:#ffd34e;color:#171717;margin:5px}
+.menu{text-align:center;padding-top:40px}.menu button{display:block;width:min(320px,90%);margin:12px auto}
+.panel{background:#1b2138;border-radius:18px;padding:16px;margin:10px 0}
+#game{display:grid;grid-template-columns:1fr 260px;gap:16px}
+#board{width:min(90vw,600px);aspect-ratio:1;border-radius:18px;position:relative;margin:auto;background:
+linear-gradient(90deg,transparent 40%,#eee 40% 60%,transparent 60%),
+linear-gradient(0deg,transparent 40%,#eee 40% 60%,transparent 60%),#f4f0df;
+box-shadow:0 12px 35px #0008;overflow:hidden}
+.quad{position:absolute;width:40%;height:40%;border-radius:18px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;padding:9%;gap:8%}
+.qred{left:0;top:0;background:#e84b4b}.qgreen{right:0;top:0;background:#40bd68}.qblue{left:0;bottom:0;background:#4d8de8}.qyellow{right:0;bottom:0;background:#e7c83e}
+.homeDot{width:28%;aspect-ratio:1;background:#fff;border-radius:50%;box-shadow:inset 0 0 0 5px #ffffff88}
+.track{position:absolute;left:40%;top:0;width:20%;height:100%;display:grid;grid-template-rows:repeat(15,1fr)}
+.track2{position:absolute;top:40%;left:0;width:100%;height:20%;display:grid;grid-template-columns:repeat(15,1fr)}
+.cell{border:1px solid #bbb;background:#faf7e9;position:relative}.redc{background:#f5a0a0}.greenc{background:#9be0ad}.bluec{background:#a9c8f5}.yellowc{background:#f4e994}.power{background:#a66cff!important;color:#fff;font-size:12px;text-align:center}
+.center{position:absolute;left:40%;top:40%;width:20%;height:20%;background:conic-gradient(#40bd68 0 25%,#e7c83e 25% 50%,#4d8de8 50% 75%,#e84b4b 75%);clip-path:polygon(0 0,100% 0,100% 100%,0 100%);display:flex;align-items:center;justify-content:center}
+.center span{background:#111c;padding:8px;border-radius:50%;font-size:13px}
+.piece{width:24px;height:24px;border-radius:50%;border:3px solid #fff;position:absolute;transform:translate(-50%,-50%);z-index:5;box-shadow:0 2px 5px #0008}
+.red{background:#e22}.green{background:#18a94d}.blue{background:#2674d9}.yellow{background:#e2bd16}
+#side h2{margin-top:0;color:#ffd34e}#dice{font-size:54px;text-align:center;margin:10px}
+#turn{font-weight:700;text-align:center}.powers{display:flex;flex-wrap:wrap}.powerBtn{font-size:13px;background:#7b4dce;color:#fff}.powerBtn:disabled{opacity:.35}
+.log{height:130px;overflow:auto;background:#101426;padding:8px;border-radius:10px;font-size:13px}
+@media(max-width:760px){#game{grid-template-columns:1fr}.panel{margin-top:0}#side{order:2}}
+</style>
+</head>
+<body>
+<div id="menu" class="screen menu">
+<h1>🎲 LUDO POWERS</h1>
+<div class="panel"><p>Local 2–4 player Ludo with special powers.</p>
+<button onclick="startGame(2)">▶️ 2 Players</button>
+<button onclick="startGame(3)">▶️ 3 Players</button>
+<button onclick="startGame(4)">▶️ 4 Players</button>
+</div>
+<div class="panel"><b>Power rules</b><p>Land on purple ⚡ spaces to collect a random power. Hold up to 3 powers.</p></div>
+</div>
+
+<div id="game" class="screen hidden">
+<div>
+<h1 style="font-size:30px">LUDO POWERS</h1>
+<div id="board">
+<div class="quad qred"><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i></div>
+<div class="quad qgreen"><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i></div>
+<div class="quad qblue"><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i></div>
+<div class="quad qyellow"><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i><i class="homeDot"></i></div>
+<div class="track" id="vtrack"></div><div class="track2" id="htrack"></div><div class="center"><span>HOME</span></div>
+</div>
+</div>
+<div id="side">
+<div class="panel"><div id="turn"></div><div id="dice">🎲</div><button style="width:100%" onclick="roll()">ROLL DICE</button></div>
+<div class="panel"><b>⚡ Powers</b><div id="powers" class="powers"></div><small>Use powers before rolling or after a roll, depending on the power.</small></div>
+<div class="panel"><b>Game log</b><div id="log" class="log"></div></div>
+<button onclick="location.reload()">🏠 Menu</button>
+</div>
+</div>
+<script>
+const colors=["red","green","blue","yellow"], names=["Red","Green","Blue","Yellow"];
+const powers=["🚀 Teleport","🛡️ Shield","🎯 Extra Roll","🔥 Attack","❄️ Freeze","👻 Invisible","🧲 Pull","💥 Double Move"];
+let n=2,players=[],turn=0,dice=0,rolled=false,activePower=null;
+const powerNames={};
+function log(x){let e=document.getElementById("log");e.innerHTML+="<div>"+x+"</div>";e.scrollTop=e.scrollHeight}
+function startGame(count){
+ n=count; players=colors.slice(0,n).map((c,i)=>({color:c,pieces:[-1,-1,-1,-1],powers:[],shield:false,invisible:false,skip:0}));
+ document.getElementById("menu").classList.add("hidden");document.getElementById("game").classList.remove("hidden");buildTrack();render();
+ log("Game started. "+names[0]+" goes first.");
+}
+function buildTrack(){
+ let v=document.getElementById("vtrack"),h=document.getElementById("htrack");
+ for(let i=0;i<15;i++){let c=document.createElement("div");c.className="cell"; if([2,7,12].includes(i))c.classList.add("power");c.textContent=c.classList.contains("power")?"⚡":"";v.appendChild(c)}
+ for(let i=0;i<15;i++){let c=document.createElement("div");c.className="cell"; if([3,8,13].includes(i))c.classList.add("power");c.textContent=c.classList.contains("power")?"⚡":"";h.appendChild(c)}
+}
+function roll(){
+ let p=players[turn]; if(p.skip){p.skip--;log(names[turn]+" is frozen!");next();return}
+ if(rolled){log("Choose a piece first.");return}
+ dice=1+Math.floor(Math.random()*6);rolled=true;document.getElementById("dice").textContent=["⚀","⚁","⚂","⚃","⚄","⚅"][dice-1];
+ log(names[turn]+" rolled "+dice+". Click a piece to move.");
+ renderPiecesClickable();
+}
+function movePiece(i){
+ if(!rolled)return;let p=players[turn],pos=p.pieces[i];
+ if(pos===-1 && dice!==6){log("You need a 6 to leave base.");return}
+ let steps=pos===-1?0:pos; let target=steps+dice;
+ if(target>56){log("That piece cannot move that far.");return}
+ p.pieces[i]=target;rolled=false;log(names[turn]+" moved piece "+(i+1)+" to "+target+".");
+ if(Math.random()<0.32 && p.powers.length<3){let pw=powers[Math.floor(Math.random()*powers.length)];p.powers.push(pw);log("⚡ "+names[turn]+" found "+pw+"!")}
+ capture(p,i); if(p.pieces.every(x=>x===56)){alert("🏆 "+names[turn]+" wins!");location.reload();return}
+ if(dice!==6)next(); else log("6! "+names[turn]+" gets another roll.");render();
+}
+function capture(p,idx){
+ let pos=p.pieces[idx]; if(pos<0||pos>52)return;
+ players.forEach((q,qi)=>{if(q===p)return;q.pieces.forEach((x,j)=>{if(x===pos&&x>=0&&!q.invisible){q.pieces[j]=-1;log("🔥 "+names[turn]+" captured "+names[qi]+" piece!");}})});
+}
+function next(){turn=(turn+1)%n;rolled=false;dice=0;document.getElementById("dice").textContent="🎲";render()}
+function usePower(i){
+ let p=players[turn],pw=p.powers[i]; if(!pw)return;
+ if(pw.includes("Extra")){p.powers.splice(i,1);log("🎯 Extra roll!");rolled=false;roll();return}
+ if(pw.includes("Shield")){p.shield=true;p.powers.splice(i,1);log("🛡️ Shield activated.");render();return}
+ if(pw.includes("Invisible")){p.invisible=true;p.powers.splice(i,1);log("👻 Invisible for this turn.");render();return}
+ if(pw.includes("Double")){p.powers.splice(i,1);if(rolled){dice*=2;log("💥 Double Move! Dice is now "+dice);render()}else log("💥 Double Move is ready; roll first.");return}
+ if(pw.includes("Freeze")){let target=(turn+1)%n;players[target].skip++;p.powers.splice(i,1);log("❄️ "+names[target]+" is frozen.");render();return}
+ if(pw.includes("Attack")){let target=(turn+1)%n;let j=players[target].pieces.findIndex(x=>x>=0&&x<56);if(j>=0){players[target].pieces[j]=-1;log("🔥 Attack sent "+names[target]+"'s piece home.");p.powers.splice(i,1)}else log("No target available.");render();return}
+ if(pw.includes("Teleport")){let j=p.pieces.findIndex(x=>x>=0);if(j>=0){p.pieces[j]=Math.min(56,p.pieces[j]+10);p.powers.splice(i,1);log("🚀 Teleported a piece +10.");render()}return}
+ if(pw.includes("Pull")){let target=(turn+1)%n,j=players[target].pieces.findIndex(x=>x>=0);if(j>=0){players[target].pieces[j]=Math.max(0,players[target].pieces[j]-5);p.powers.splice(i,1);log("🧲 Pulled "+names[target]+"'s piece back 5.");render()}return}
+}
+function render(){
+ document.getElementById("turn").textContent="Turn: "+names[turn];
+ let e=document.getElementById("powers");e.innerHTML="";
+ players[turn].powers.forEach((pw,i)=>{let b=document.createElement("button");b.className="powerBtn";b.textContent=pw;b.onclick=()=>usePower(i);e.appendChild(b)});
+ renderPiecesClickable();
+}
+function renderPiecesClickable(){
+ document.querySelectorAll(".piece").forEach(x=>x.remove());
+ players.forEach((p,pi)=>p.pieces.forEach((pos,i)=>{
+  let e=document.createElement("div");e.className="piece "+p.color;
+  if(pos===-1){let q=document.querySelectorAll(".q"+p.color+" .homeDot")[i];let r=q.getBoundingClientRect(),b=document.getElementById("board").getBoundingClientRect();e.style.left=(r.left-b.left+r.width/2)+"px";e.style.top=(r.top-b.top+r.height/2)+"px"}
+  else {let angle=(pos/56)*Math.PI*2-Math.PI/2,rad=34; e.style.left=(50+rad*Math.cos(angle))+"%";e.style.top=(50+rad*Math.sin(angle))+"%"}
+  if(pi===turn&&rolled)e.onclick=()=>movePiece(i);
+  document.getElementById("board").appendChild(e);
+ }))
+}
+</script>
+</body></html>
